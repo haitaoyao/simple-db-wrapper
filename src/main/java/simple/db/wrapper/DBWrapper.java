@@ -1,6 +1,7 @@
 package simple.db.wrapper;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -58,9 +59,40 @@ public class DBWrapper {
 		registerDriver(PHOENIX_DB_DRIVER);
 	}
 
-	public DBWrapper(DataSource dataSource) {
-		Preconditions.checkNotNull(dataSource);
-		this.dataSource = dataSource;
+	private final String name;
+
+	private final String url;
+
+	private final String info;
+
+	public DBWrapper(String name, DataSource dataSource) {
+		this.name = Preconditions.checkNotNull(name);
+		this.dataSource = Preconditions.checkNotNull(dataSource);
+		this.url = this.getDatabaseUrl(dataSource);
+		this.info = String.format("name: %s, url: %s", this.name,
+		// if url is null, use DataSource.toString().
+		// hope the data source provider implement a descriptive toString method
+				(url == null ? this.dataSource : this.url));
+	}
+
+	public String getName() {
+		return this.name;
+	}
+
+	public String getUrl() {
+		return this.url;
+	}
+
+	private String getDatabaseUrl(DataSource ds) {
+		String url = null;
+		try {
+			Connection conn = ds.getConnection();
+			DatabaseMetaData metaData = conn.getMetaData();
+			url = metaData.getURL();
+		} catch (SQLException e) {
+			LOG.error("failed to get info from data source: " + ds, e);
+		}
+		return url;
 	}
 
 	public <T> Collection<T> queryList(DBQueryOperation<T> op)
@@ -166,7 +198,8 @@ public class DBWrapper {
 		Connection conn = this.dataSource.getConnection();
 		time = System.currentTimeMillis() - time;
 		if (time > MAX_TIME_GET_CONNECTION_ALLOWED) {
-			LOG.warn("too slow to get connection, time elapsed(ms): " + time);
+			LOG.warn("too slow to get connection, info : " + this.info
+					+ "time elapsed(ms): " + time);
 		}
 		return conn;
 	}
