@@ -5,10 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedList;
 
-import javax.sql.*;
+import javax.sql.DataSource;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -90,19 +89,15 @@ public class DBWrapper {
 			ps = conn.prepareStatement(op.getSql());
 			op.setParameter(ps);
 			rs = ps.executeQuery();
+			result = new LinkedList<T>();
+			int index = 0;
+			while (rs.next() && index++ < limit) {
+				result.add(op.parseResultSet(rs));
+			}
 			if (rs.next()) {
-				result = new LinkedList<T>();
-				int index = 0;
-				while (rs.next() && index++ < limit) {
-					result.add(op.parseResultSet(rs));
-				}
-				if (rs.next()) {
-					throw new QueryExceedLimitSQLException(
-							"result set too big, sql: " + op.getSql()
-									+ ", limit: " + limit);
-				}
-			} else {
-				result = Collections.emptyList();
+				throw new QueryExceedLimitSQLException(
+						"result set too big, sql: " + op.getSql() + ", limit: "
+								+ limit);
 			}
 		} finally {
 			closeQuietly(conn, ps, rs);
@@ -169,7 +164,7 @@ public class DBWrapper {
 	private Connection getDBConnection() throws SQLException {
 		long time = System.currentTimeMillis();
 		Connection conn = this.dataSource.getConnection();
-		time = System.currentTimeMillis();
+		time = System.currentTimeMillis() - time;
 		if (time > MAX_TIME_GET_CONNECTION_ALLOWED) {
 			LOG.warn("too slow to get connection, time elapsed(ms): " + time);
 		}
