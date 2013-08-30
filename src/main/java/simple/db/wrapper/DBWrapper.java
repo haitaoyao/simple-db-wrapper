@@ -85,12 +85,15 @@ public class DBWrapper {
 
 	private String getDatabaseUrl(DataSource ds) {
 		String url = null;
+		Connection conn = null;
 		try {
-			Connection conn = ds.getConnection();
+			conn = ds.getConnection();
 			DatabaseMetaData metaData = conn.getMetaData();
 			url = metaData.getURL();
 		} catch (SQLException e) {
 			LOG.error("failed to get info from data source: " + ds, e);
+		} finally {
+			this.closeQuietly(conn, null, null);
 		}
 		return url;
 	}
