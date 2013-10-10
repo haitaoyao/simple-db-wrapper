@@ -173,7 +173,7 @@ public class DBWrapper {
 		}
 		return result;
 	}
-
+	
 	private void closeQuietly(Connection conn, PreparedStatement ps,
 			ResultSet rs) {
 		if (rs != null) {
